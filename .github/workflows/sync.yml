@@ -1,0 +1,44 @@
+name: Upstream Sync
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # 每天 UTC 0点（北京时间早8点）自动同步
+  workflow_dispatch: # 允许你手动点击按钮触发同步
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    name: Sync latest commits from upstream repo
+
+    steps:
+    - name: Checkout target repo
+      uses: actions/checkout@v3
+      with:
+        ref: master # 【注意】如果你的是 main，请把这里改成 main
+
+    - name: Sync upstream changes
+      id: sync
+      uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+      with:
+        # 这里我已经帮你填好了上游仓库地址
+        upstream_sync_repo: ccxt/go-binance
+        
+        # 【注意】这里假设上游也是 master 分支，如果上游是 main，请修改
+        upstream_sync_branch: master
+        
+        # 【注意】这是你自己的分支，如果是 main，请修改
+        target_sync_branch: master
+        
+        target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+        test_mode: false
+
+    - name: New commits found
+      if: steps.sync.outputs.has_new_commits == 'true'
+      run: echo "发现新代码，已自动同步到你的仓库！"
+    
+    - name: No new commits
+      if: steps.sync.outputs.has_new_commits == 'false'
+      run: echo "上游没有更新，今天无事发生。"
